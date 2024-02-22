@@ -118,15 +118,15 @@ jobs:
 
     - name: Install NuGet dependencies (net)
       run: 
-        make nuget Flavor=Net
+        make nuget Flavor=Net Configuration=Release
 
     - name: Build keepass2android (net)
       run: |
-        make msbuild Flavor=Net
+        make msbuild Flavor=Net Configuration=Release
 
     - name: Build APK (net)
       run: |
-        make apk Flavor=Net
+        make apk Flavor=Net Configuration=Release
 
     - name: Archive production artifacts (net)
       if: ${{ inputs.upload_artifacts }}
