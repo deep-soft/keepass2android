@@ -151,7 +151,7 @@ jobs:
         echo "LIST: " ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
         ls -l ./signed-apk/net/
 
-    - uses: deep-soft/sign-android-release@v1
+    - uses: deep-soft/sign-android-release@v1.3.0
       name: Sign app APK
       if: env.ANDROID_SIGNING_KEY != null
       id: sign-keepass2android-net
@@ -169,7 +169,7 @@ jobs:
       if: env.ANDROID_SIGNING_KEY != null
       uses: deep-soft/upload-artifact@v4
       with:
-        name: ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-release-signed.apk
+        name: ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
         path: ${{steps.sign-keepass2android-net.outputs.signedReleaseFile}}
 
     - name: Publish signed apk package
@@ -180,6 +180,7 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         files: |
           ${{steps.sign-keepass2android-net.outputs.signedReleaseFile}}
+          ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
           ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-release-signed.txt
           _tag_name_.txt
 
@@ -221,7 +222,7 @@ jobs:
         echo "LIST: " ./signed-apk/nonet/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
         ls -l ./signed-apk/nonet
 
-    - uses: deep-soft/sign-android-release@v1
+    - uses: deep-soft/sign-android-release@v1.3.0
       name: Sign app APK
       if: env.ANDROID_SIGNING_KEY != null
       id: sign-keepass2android-nonet
@@ -239,7 +240,7 @@ jobs:
       if: env.ANDROID_SIGNING_KEY != null
       uses: deep-soft/upload-artifact@v4
       with:
-        name: ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-release-signed.apk
+        name: ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
         path: ${{steps.sign-keepass2android-nonet.outputs.signedReleaseFile}}
 
     - name: Publish signed apk package
@@ -250,6 +251,7 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         files: |
           ${{steps.sign-keepass2android-nonet.outputs.signedReleaseFile}}
+          ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
           ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-release-signed.txt
           _tag_name_.txt
 
