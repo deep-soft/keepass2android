@@ -140,22 +140,22 @@ jobs:
       shell: bash
       run: |
         set -x
-        mkdir -p signed-apk
-        echo "LIST: " src/keepass2android/bin/*/*-Signed.apk
-        ls -l src/keepass2android/bin/*/*-Signed.apk
-        cp src/keepass2android/bin/*/*-Signed.apk ./signed-apk/
-        echo "LIST: " ./signed-apk/
-        ls -l ./signed-apk/
-        mv ./signed-apk/*-Signed.apk ./signed-apk/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
-        echo "LIST: " ./signed-apk/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
-        ls -l ./signed-apk/
+        mkdir -p signed-apk/net
+        echo "LIST: " src/keepass2android/bin/*/*.apk
+        ls -l src/keepass2android/bin/*/*.apk
+        cp src/keepass2android/bin/Release/keepass2android.keepass2android-Signed.apk ./signed-apk/net/
+        echo "LIST: " ./signed-apk/net/
+        ls -l ./signed-apk/net/
+        mv ./signed-apk/keepass2android.keepass2android-Signed.apk ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
+        echo "LIST: " ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
+        ls -l ./signed-apk/net/
 
     - uses: deep-soft/sign-android-release@v1
       name: Sign app APK
       if: env.ANDROID_SIGNING_KEY != null
       id: sign-keepass2android-net
       with:
-        releaseDirectory: ./signed-apk
+        releaseDirectory: ./signed-apk/net/
         signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
         alias: ${{ secrets.ANDROID_ALIAS }}
         keyStorePassword: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
@@ -183,11 +183,11 @@ jobs:
           _tag_name_.txt
 
     - name: Install NuGet dependencies (nonet)
-      run: make nuget Flavor=NoNet
+      run: make nuget Flavor=NoNet Configuration=Release
 
     - name: Build keepass2android (nonet)
       run: |
-        make msbuild Flavor=NoNet
+        make msbuild Flavor=NoNet Configuration=Release
 
     - name: Test Autofill
       working-directory: ./src/Kp2aAutofillParserTest
@@ -196,7 +196,7 @@ jobs:
 
     - name: Build APK (nonet)
       run: |
-        make apk Flavor=NoNet
+        make apk Flavor=NoNet Configuration=Release
 
     - name: Archive production artifacts (nonet)
       if: ${{ inputs.upload_artifacts }}
@@ -210,22 +210,22 @@ jobs:
       shell: bash
       run: |
         set -x
-        mkdir -p signed-apk
-        echo "LIST: " src/keepass2android/bin/*/*-Signed.apk
-        ls -l src/keepass2android/bin/*/*-Signed.apk
-        cp src/keepass2android/bin/*/*-Signed.apk ./signed-apk/
-        echo "LIST: " ./signed-apk/
-        ls -l ./signed-apk/
-        mv ./signed-apk/*-Signed.apk ./signed-apk/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
-        echo "LIST: " ./signed-apk/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
-        ls -l ./signed-apk/
+        mkdir -p signed-apk/nonet
+        echo "LIST: " src/keepass2android/bin/*/*.apk
+        ls -l src/keepass2android/bin/*/*.apk
+        cp src/keepass2android/bin/Release/keepass2android.keepass2android_nonet-Signed.apk ./signed-apk/nonet
+        echo "LIST: " ./signed-apk/nonet
+        ls -l ./signed-apk/nonet
+        mv ./keepass2android.keepass2android_nonet-Signed.apk ./signed-apk/nonet/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
+        echo "LIST: " ./signed-apk/nonet/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
+        ls -l ./signed-apk/nonet
 
     - uses: deep-soft/sign-android-release@v1
       name: Sign app APK
       if: env.ANDROID_SIGNING_KEY != null
       id: sign-keepass2android-nonet
       with:
-        releaseDirectory: ./signed-apk
+        releaseDirectory: ./signed-apk/nonet
         signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
         alias: ${{ secrets.ANDROID_ALIAS }}
         keyStorePassword: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
