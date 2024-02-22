@@ -1,6 +1,8 @@
 name: Build keepass2android app
 
-on: [push, pull_request]
+# on: [push, pull_request]
+on:
+  workflow_dispatch:
 
 jobs:
   # macos:
