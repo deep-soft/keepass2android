@@ -146,7 +146,7 @@ jobs:
         cp src/keepass2android/bin/Release/keepass2android.keepass2android-Signed.apk ./signed-apk/net/
         echo "LIST: " ./signed-apk/net/
         ls -l ./signed-apk/net/
-        mv ./signed-apk/keepass2android.keepass2android-Signed.apk ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
+        mv ./signed-apk/net/keepass2android.keepass2android-Signed.apk ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
         echo "LIST: " ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
         ls -l ./signed-apk/net/
 
@@ -216,7 +216,7 @@ jobs:
         cp src/keepass2android/bin/Release/keepass2android.keepass2android_nonet-Signed.apk ./signed-apk/nonet
         echo "LIST: " ./signed-apk/nonet
         ls -l ./signed-apk/nonet
-        mv ./keepass2android.keepass2android_nonet-Signed.apk ./signed-apk/nonet/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
+        mv ./signed-apk/nonet/keepass2android.keepass2android_nonet-Signed.apk ./signed-apk/nonet/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
         echo "LIST: " ./signed-apk/nonet/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
         ls -l ./signed-apk/nonet
 
