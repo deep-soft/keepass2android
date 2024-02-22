@@ -6,7 +6,21 @@ name: act-Build keepass2android app
 
 #on: [push, pull_request]
 on:
-  workflow_dispatch
+  workflow_dispatch:
+    inputs:
+      upload_artifacts:
+        description: upload_artifacts
+        type: boolean
+        default: false
+        required: true
+
+env:
+   PRG_NAME:    "keepass2android"
+   PRG_VERSION: "1.0.0"
+   TAG_NAME:    "keepass2android"
+   TAG_VERSION: 'v1.0.0'
+   TAG_BUILD:   "-b"
+   TAG_REF:     "0000000"
 
 jobs:
   windows:
@@ -19,6 +33,34 @@ jobs:
 
     steps:
     - uses: deep-soft/checkout@v4
+
+# grep "android:versionName" src/keepass2android/Properties/AndroidManifest_nonet.xml | awk -F"=" '{print $2}' | tr -d '"'
+# android:versionName="1.11-r0" 
+
+    - name: Get ref, set build version
+      shell: bash
+      run: |
+        _ref_all_=$(git log -1 --format='%H')
+        # _ref_=$(echo ${_ref_all_::7})
+        _ref_org_=${{ env.TAG_REF }}
+        _ref_len_="${#_ref_org_}"
+        _ref_=$(echo ${_ref_all_::$_ref_len_})
+        _prg_version_=$(grep "android:versionName" src/keepass2android/Properties/AndroidManifest_nonet.xml | awk -F"=" '{print $2}' | tr -d '"')
+        echo "TAG_REF=$_ref_" >> $GITHUB_ENV
+        _build_=${{ env.TAG_BUILD }}.$_ref_
+        echo "TAG_BUILD=$_build_" >> $GITHUB_ENV
+        echo "PRG_VERSION=$_prg_version_" >> $GITHUB_ENV
+        echo "TAG_VERSION=$_prg_version_" >> $GITHUB_ENV
+
+    - name: Print ref, build version
+      shell: bash
+      run: |
+        echo "VER: ${{ env.PRG_VERSION }}
+        echo "TAG: ${{ env.TAG_VERSION }}
+        echo "REF: ${{ env.TAG_REF }}
+        echo "BLD: ${{ env.TAG_BUILD }}
+        echo "${{ env.TAG_NAME }}-${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}" > _tag_name_.txt
+        echo "${{ env.TAG_NAME }}-${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}" > ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-release-signed.txt
 
     - name: Setup Gradle
       uses: deep-soft/gradle-build-action@v3
@@ -87,11 +129,58 @@ jobs:
         make apk Flavor=Net
 
     - name: Archive production artifacts (net)
+      if: ${{ inputs.upload_artifacts }}
       uses: deep-soft/upload-artifact@v4
       with:
-        name: signed APK ('net' built on ${{ github.job }})
+        name: signed-APK-net-${{ github.job }}
         path: |
           src/keepass2android/bin/*/*-Signed.apk
+
+    - name: Copy apk from outputs/
+      shell: bash
+      run: |
+        set -x
+        mkdir -p signed-apk
+        echo "LIST: " src/keepass2android/bin/*/*-Signed.apk
+        ls -l src/keepass2android/bin/*/*-Signed.apk
+        cp src/keepass2android/bin/*/*-Signed.apk ./signed-apk/
+        echo "LIST: " ./signed-apk/
+        ls -l ./signed-apk/
+        mv ./signed-apk/*-Signed.apk ./signed-apk/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
+        echo "LIST: " ./signed-apk/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
+        ls -l ./signed-apk/
+
+    - uses: deep-soft/sign-android-release@v1
+      name: Sign app APK
+      if: env.ANDROID_SIGNING_KEY != null
+      id: sign-keepass2android-net
+      with:
+        releaseDirectory: ./signed-apk
+        signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
+        alias: ${{ secrets.ANDROID_ALIAS }}
+        keyStorePassword: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
+        keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      env:
+        # override default build-tools version (29.0.3) -- optional
+        BUILD_TOOLS_VERSION: "34.0.0"
+
+    - name: Upload Artifacts
+      if: env.ANDROID_SIGNING_KEY != null
+      uses: deep-soft/upload-artifact@v4
+      with:
+        name: ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-release-signed.apk
+        path: ${{steps.sign-keepass2android-net.outputs.signedReleaseFile}}
+
+    - name: Publish signed apk package
+      if: env.ANDROID_SIGNING_KEY != null
+      uses: deep-soft/action-gh-release@v2.1
+      with:
+        draft: true
+        tag_name: ${{ env.TAG_NAME }}
+        files: |
+          ${{steps.sign-keepass2android-net.outputs.signedReleaseFile}}
+          ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-release-signed.txt
+          _tag_name_.txt
 
     - name: Install NuGet dependencies (nonet)
       run: make nuget Flavor=NoNet
@@ -110,11 +199,58 @@ jobs:
         make apk Flavor=NoNet
 
     - name: Archive production artifacts (nonet)
+      if: ${{ inputs.upload_artifacts }}
       uses: deep-soft/upload-artifact@v4
       with:
-        name: signed APK ('nonet' built on ${{ github.job }})
+        name: signed-APK-nonet-${{ github.job }}
         path: |
           src/keepass2android/bin/*/*-Signed.apk
+
+    - name: Copy apk from outputs/
+      shell: bash
+      run: |
+        set -x
+        mkdir -p signed-apk
+        echo "LIST: " src/keepass2android/bin/*/*-Signed.apk
+        ls -l src/keepass2android/bin/*/*-Signed.apk
+        cp src/keepass2android/bin/*/*-Signed.apk ./signed-apk/
+        echo "LIST: " ./signed-apk/
+        ls -l ./signed-apk/
+        mv ./signed-apk/*-Signed.apk ./signed-apk/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
+        echo "LIST: " ./signed-apk/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
+        ls -l ./signed-apk/
+
+    - uses: deep-soft/sign-android-release@v1
+      name: Sign app APK
+      if: env.ANDROID_SIGNING_KEY != null
+      id: sign-keepass2android-nonet
+      with:
+        releaseDirectory: ./signed-apk
+        signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
+        alias: ${{ secrets.ANDROID_ALIAS }}
+        keyStorePassword: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
+        keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      env:
+        # override default build-tools version (29.0.3) -- optional
+        BUILD_TOOLS_VERSION: "34.0.0"
+
+    - name: Upload Artifacts
+      if: env.ANDROID_SIGNING_KEY != null
+      uses: deep-soft/upload-artifact@v4
+      with:
+        name: ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-release-signed.apk
+        path: ${{steps.sign-keepass2android-nonet.outputs.signedReleaseFile}}
+
+    - name: Publish signed apk package
+      if: env.ANDROID_SIGNING_KEY != null
+      uses: deep-soft/action-gh-release@v2.1
+      with:
+        draft: true
+        tag_name: ${{ env.TAG_NAME }}
+        files: |
+          ${{steps.sign-keepass2android-nonet.outputs.signedReleaseFile}}
+          ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-release-signed.txt
+          _tag_name_.txt
 
     - name: Perform "make distclean"
       run: make distclean
