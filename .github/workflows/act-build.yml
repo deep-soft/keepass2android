@@ -15,12 +15,13 @@ on:
         required: true
 
 env:
-   PRG_NAME:    "keepass2android"
-   PRG_VERSION: "1.0.0"
-   TAG_NAME:    "keepass2android"
-   TAG_VERSION: 'v1.0.0'
-   TAG_BUILD:   "-b"
-   TAG_REF:     "0000000"
+  PRG_NAME:    "keepass2android"
+  PRG_VERSION: "1.0.0"
+  TAG_NAME:    "keepass2android"
+  TAG_VERSION: 'v1.0.0'
+  TAG_BUILD:   "-b"
+  TAG_REF:     "0000000"
+  ANDROID_SIGNING_KEY: '${{ secrets.ANDROID_SIGNING_KEY }}'
 
 jobs:
   windows:
