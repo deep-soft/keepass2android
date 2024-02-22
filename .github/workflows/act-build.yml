@@ -169,7 +169,7 @@ jobs:
       if: env.ANDROID_SIGNING_KEY != null
       uses: deep-soft/upload-artifact@v4
       with:
-        name: ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
+        name: ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net
         path: ${{steps.sign-keepass2android-net.outputs.signedReleaseFile}}
 
     - name: Publish signed apk package
@@ -180,7 +180,7 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         files: |
           ${{steps.sign-keepass2android-net.outputs.signedReleaseFile}}
-          ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
+          ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net-signed.apk
           ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-release-signed.txt
           _tag_name_.txt
 
@@ -240,7 +240,7 @@ jobs:
       if: env.ANDROID_SIGNING_KEY != null
       uses: deep-soft/upload-artifact@v4
       with:
-        name: ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
+        name: ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet
         path: ${{steps.sign-keepass2android-nonet.outputs.signedReleaseFile}}
 
     - name: Publish signed apk package
@@ -251,7 +251,7 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         files: |
           ${{steps.sign-keepass2android-nonet.outputs.signedReleaseFile}}
-          ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
+          ./signed-apk/nonet/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet-signed.apk
           ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-release-signed.txt
           _tag_name_.txt
 
