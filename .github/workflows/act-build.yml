@@ -21,7 +21,7 @@ jobs:
     - uses: deep-soft/checkout@v4
 
     - name: Setup Gradle
-      uses: deeps-soft/gradle-build-action@v3
+      uses: deep-soft/gradle-build-action@v3
 
     - name: Cache NuGet packages
       uses: deep-soft/cache@v4
@@ -87,7 +87,7 @@ jobs:
         make apk Flavor=Net
 
     - name: Archive production artifacts (net)
-      uses: actions/upload-artifact@v4
+      uses: deep-soft/upload-artifact@v4
       with:
         name: signed APK ('net' built on ${{ github.job }})
         path: |
