@@ -151,7 +151,7 @@ jobs:
         echo "LIST: " ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net.apk
         ls -l ./signed-apk/net/
 
-    - uses: deep-soft/sign-android-release@v1.3.0
+    - uses: deep-soft/sign-android-release@v1
       name: Sign app APK
       if: env.ANDROID_SIGNING_KEY != null
       id: sign-keepass2android-net
@@ -178,9 +178,9 @@ jobs:
       with:
         draft: true
         tag_name: ${{ env.TAG_NAME }}
+#          ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net-signed.apk        
         files: |
           ${{steps.sign-keepass2android-net.outputs.signedReleaseFile}}
-          ./signed-apk/net/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-net-signed.apk
           ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-release-signed.txt
           _tag_name_.txt
 
@@ -222,7 +222,7 @@ jobs:
         echo "LIST: " ./signed-apk/nonet/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet.apk
         ls -l ./signed-apk/nonet
 
-    - uses: deep-soft/sign-android-release@v1.3.0
+    - uses: deep-soft/sign-android-release@v1
       name: Sign app APK
       if: env.ANDROID_SIGNING_KEY != null
       id: sign-keepass2android-nonet
@@ -249,9 +249,9 @@ jobs:
       with:
         draft: true
         tag_name: ${{ env.TAG_NAME }}
+#          ./signed-apk/nonet/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet-signed.apk        
         files: |
           ${{steps.sign-keepass2android-nonet.outputs.signedReleaseFile}}
-          ./signed-apk/nonet/${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-nonet-signed.apk
           ${{ env.PRG_NAME }}-${{ env.PRG_VERSION }}-release-signed.txt
           _tag_name_.txt
 
