@@ -21,6 +21,7 @@ using Android.App;
 using Android.Content;
 using Android.OS;
 using Android.Widget;
+using Google.Android.Material.Dialog;
 
 namespace keepass2android
 {
@@ -129,24 +130,24 @@ namespace keepass2android
 			if ( !String.IsNullOrEmpty(message) ) {
 			    Kp2aLog.Log("OnFinish message: " + message);
                 if (makeDialog && ctx != null)
-			    {
-			        try
-			        {
-			            AlertDialog.Builder builder = new AlertDialog.Builder(ctx);
-			            
-			            builder.SetMessage(message)
-			                .SetPositiveButton(Android.Resource.String.Ok, (sender, args) => ((Dialog)sender).Dismiss())
-			                .Show();
+                {
+                    try
+                    {
+                        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(ctx);
+
+                        builder.SetMessage(message)
+                            .SetPositiveButton(Android.Resource.String.Ok, (sender, args) => ((Dialog)sender).Dismiss())
+                            .Show();
 
                     }
                     catch (Exception)
-			        {
-			            Toast.MakeText(ctx, message, ToastLength.Long).Show();
-			        }
-			    }
+                    {
+                        Toast.MakeText(ctx, message, ToastLength.Long).Show();
+                    }
+                }
                 else
                     Toast.MakeText(ctx ?? Application.Context, message, ToastLength.Long).Show();
-			}
+            }
 		}
 	}
 }

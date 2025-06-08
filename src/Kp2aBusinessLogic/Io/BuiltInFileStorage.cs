@@ -13,7 +13,7 @@ using Android.Content.PM;
 using Android.OS;
 using Android.Preferences;
 using Java.IO;
-using Android.Support.V4;
+using KeePass.Util;
 using KeePassLib.Serialization;
 using KeePassLib.Utility;
 using File = System.IO.File;
@@ -121,7 +121,7 @@ namespace keepass2android.Io
 			var response = ex.Response as HttpWebResponse;
 			if ((response != null) && (response.StatusCode == HttpStatusCode.NotFound))
 			{
-				throw new FileNotFoundException(ex.Message, ioc.Path, ex);
+				throw new FileNotFoundException(ExceptionUtil.GetErrorMessage(ex), ioc.Path, ex);
 			}
 			if (ex.Status == WebExceptionStatus.TrustFailure)
 			{
@@ -291,7 +291,7 @@ namespace keepass2android.Io
 
 		public void OnCreate(IFileStorageSetupActivity fileStorageSetupActivity, Bundle savedInstanceState)
 		{
-		    Android.Support.V4.App.ActivityCompat.RequestPermissions(((Activity)fileStorageSetupActivity), new[] { Manifest.Permission.WriteExternalStorage, Manifest.Permission.ReadExternalStorage }, 0);
+			AndroidX.Core.App.ActivityCompat.RequestPermissions(((Activity)fileStorageSetupActivity), new[] { Manifest.Permission.WriteExternalStorage, Manifest.Permission.ReadExternalStorage }, 0);
 		}
 
 		public void OnResume(IFileStorageSetupActivity activity)

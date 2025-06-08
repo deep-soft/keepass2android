@@ -29,6 +29,7 @@ using KeePassLib.Utility;
 using keepass2android.Io;
 using Debug = System.Diagnostics.Debug;
 using Exception = System.Exception;
+using KeePass.Util;
 
 namespace keepass2android
 {
@@ -43,7 +44,7 @@ namespace keepass2android
 		/// </summary>
 		private readonly Stream _streamForOrigFile;
 		private readonly Context _ctx;
-		private Thread _workerThread;
+		private Java.Lang.Thread _workerThread;
 
 		public SaveDb(Activity ctx, IKp2aApp app, Database db, OnFinish finish, bool dontSave)
 			: base(ctx, finish)
@@ -187,7 +188,7 @@ namespace keepass2android
 			}
 */
 					Kp2aLog.LogUnexpectedError(e);
-					Finish(false, e.Message);
+					Finish(false, ExceptionUtil.GetErrorMessage(e));
 					return;
 				}
 			}
@@ -213,7 +214,7 @@ namespace keepass2android
 		{
 			try
 			{
-				_workerThread = new Thread(() =>
+				_workerThread = new Java.Lang.Thread(() =>
 					{
 						try
 						{
@@ -222,8 +223,8 @@ namespace keepass2android
 						catch (Exception e)
 						{
 							Kp2aLog.LogUnexpectedError(e);
-							Kp2aLog.Log("Error in worker thread of SaveDb: " + e);
-							Finish(false, e.Message);
+							Kp2aLog.Log("Error in worker thread of SaveDb: " + ExceptionUtil.GetErrorMessage(e));
+							Finish(false, ExceptionUtil.GetErrorMessage(e));
 						}
 						
 					});
@@ -233,7 +234,7 @@ namespace keepass2android
 			{
 				Kp2aLog.LogUnexpectedError(e);
 				Kp2aLog.Log("Error starting worker thread of SaveDb: "+e);
-				Finish(false, e.Message);
+				Finish(false, ExceptionUtil.GetErrorMessage(e));
 			}
 			
 		}

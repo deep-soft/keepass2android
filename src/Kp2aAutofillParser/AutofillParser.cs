@@ -445,6 +445,9 @@ namespace Kp2aAutofillParser
 
         public static string ToCanonicalHint(string hint)
         {
+            //avoid crash when looking up a null key
+            if (hint == null)
+                return "";
             string canonicalHint;
             if (!hintToCanonicalReplacement.TryGetValue(hint, out canonicalHint))
                 canonicalHint = hint;
@@ -730,7 +733,7 @@ namespace Kp2aAutofillParser
     {
         public List<TField> InputFields { get; set; } = new List<TField>();
 
-        public string PackageId { get; set; } = null;
+        public string? PackageId { get; set; } = null;
         public string WebDomain { get; set; } = null;
     }
 
@@ -841,6 +844,7 @@ namespace Kp2aAutofillParser
                         continue;
                     if (viewHints.Where(h => h != null).Select(AutofillHintsHelper.ToCanonicalHint).Intersect(_autofillHintsForLogin).Any())
                     {
+
                         AddFieldToHintMap(viewNode, viewHints.Where(h => h != null).Select(AutofillHintsHelper.ToCanonicalHint).ToHashSet().ToArray());
                     }
 
