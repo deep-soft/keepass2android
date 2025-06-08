@@ -37,6 +37,7 @@ jobs:
 
 # grep "android:versionName" src/keepass2android/Properties/AndroidManifest_nonet.xml | awk -F"=" '{print $2}' | tr -d '"'
 # android:versionName="1.11-r0" 
+# src/keepass2android-app/Manifests/AndroidManifest_nonet.xml
 
     - name: Get ref, set build version
       shell: bash
@@ -46,7 +47,8 @@ jobs:
         _ref_org_=${{ env.TAG_REF }}
         _ref_len_="${#_ref_org_}"
         _ref_=$(echo ${_ref_all_::$_ref_len_})
-        _prg_version_=$(grep "android:versionName" src/keepass2android/Properties/AndroidManifest_nonet.xml | awk -F"=" '{print $2}' | awk '{print $1}' | tr -d '"')
+        # _prg_version_=$(grep "android:versionName" src/keepass2android/Properties/AndroidManifest_nonet.xml | awk -F"=" '{print $2}' | awk '{print $1}' | tr -d '"')
+        _prg_version_=$(grep "android:versionName" src/keepass2android-app/Manifests/AndroidManifest_nonet.xml | awk -F"=" '{print $2}' | awk '{print $1}' | tr -d '"')
         echo "TAG_REF=$_ref_" >> $GITHUB_ENV
         _build_=${{ env.TAG_BUILD }}.$_ref_
         echo "TAG_BUILD=$_build_" >> $GITHUB_ENV
