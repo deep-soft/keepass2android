@@ -46,9 +46,11 @@ using keepass2android;
 using keepass2android.Utils;
 using KeePassLib.Interfaces;
 using KeePassLib.Utility;
+
 using Message = keepass2android.Utils.Message;
 #if !NoNet
 #if !EXCLUDE_JAVAFILESTORAGE
+using Kp2aBusinessLogic.Io;
 using Android.Gms.Common;
 using Keepass2android.Javafilestorage;
 using GoogleDriveFileStorage = keepass2android.Io.GoogleDriveFileStorage;
@@ -191,8 +193,8 @@ namespace keepass2android
 	        var prefs = PreferenceManager.GetDefaultSharedPreferences(LocaleManager.LocalizedAppContext);
 	        var createBackup = prefs.GetBoolean(LocaleManager.LocalizedAppContext.GetString(Resource.String.CreateBackups_key), true)
                 && !(new LocalFileStorage(this).IsLocalBackup(ioConnectionInfo));
-
-	        MemoryStream backupCopy = new MemoryStream();
+            Kp2aLog.Log("LoadDb: Copying database for backup");
+            MemoryStream backupCopy = new MemoryStream();
 	        if (createBackup)
 	        {
 
@@ -201,6 +203,7 @@ namespace keepass2android
 	            //reset stream if we need to reuse it later:
 	            memoryStream.Seek(0, SeekOrigin.Begin);
 	        }
+            Kp2aLog.Log("LoadDb: Checking open databases");
 
             foreach (Database openDb in _openDatabases)
 	        {
@@ -350,7 +353,11 @@ namespace keepass2android
 			QuickUnlockEnabled = enabled;
 		}
 
-		public bool QuickUnlockEnabled { get; private set; }
+		public bool ScreenLockWasEnabledWhenOpeningDatabase { get; set; }
+		public bool QuickUnlockBlockedWhenDeviceNotSecureWhenOpeningDatabase { get; set; }
+
+
+        public bool QuickUnlockEnabled { get; private set; }
 
 		public int QuickUnlockKeyLength { get; private set; }
     
@@ -832,8 +839,8 @@ namespace keepass2android
 							new AndroidContentStorage(LocaleManager.LocalizedAppContext),
 #if !EXCLUDE_JAVAFILESTORAGE
 #if !NoNet
-							new DropboxFileStorage(LocaleManager.LocalizedAppContext, this),
-							new DropboxAppFolderFileStorage(LocaleManager.LocalizedAppContext, this),
+							DropboxFileStorage.IsConfigured ? new DropboxFileStorage(LocaleManager.LocalizedAppContext, this) : null,
+							DropboxAppFolderFileStorage.IsConfigured ? new DropboxAppFolderFileStorage(LocaleManager.LocalizedAppContext, this): null,
                             GoogleApiAvailability.Instance.IsGooglePlayServicesAvailable(LocaleManager.LocalizedAppContext)==ConnectionResult.Success ? new GoogleDriveFileStorage(LocaleManager.LocalizedAppContext, this) : null,
                             GoogleApiAvailability.Instance.IsGooglePlayServicesAvailable(LocaleManager.LocalizedAppContext)==ConnectionResult.Success ? new GoogleDriveAppDataFileStorage(LocaleManager.LocalizedAppContext, this) : null,
 							new OneDriveFileStorage(this),
@@ -842,8 +849,9 @@ namespace keepass2android
 						    new OneDrive2AppFolderFileStorage(),
                             new SftpFileStorage(LocaleManager.LocalizedAppContext, this, IsFtpDebugEnabled()),
 							new NetFtpFileStorage(LocaleManager.LocalizedAppContext, this, IsFtpDebugEnabled),
-							new WebDavFileStorage(this),
-							new PCloudFileStorage(LocaleManager.LocalizedAppContext, this),
+							new WebDavFileStorage(this, WebDavChunkedUploadSize),
+                            new SmbFileStorage(),
+                            new PCloudFileStorage(LocaleManager.LocalizedAppContext, this),
                             new PCloudFileStorageAll(LocaleManager.LocalizedAppContext, this),
                             new MegaFileStorage(App.Context),
 							//new LegacyWebDavStorage(this),
@@ -1244,7 +1252,7 @@ namespace keepass2android
 	    {
 	        var db = TryFindDatabaseForElement(element);
             if (db == null)
-                throw new Exception("Database element not found!");
+                throw new Exception($"Database element {element.Uuid} not found in any of {OpenDatabases.Count()} databases!");
 	        return db;
 	    }
 
@@ -1328,6 +1336,18 @@ namespace keepass2android
                 _messagePresenter = value;
             }
             
+        }
+
+
+        public int WebDavChunkedUploadSize
+        {
+            get
+            {
+                return int.Parse(PreferenceManager.GetDefaultSharedPreferences(LocaleManager.LocalizedAppContext)
+                    .GetString("WebDavChunkedUploadSize_str",
+                        LocaleManager.LocalizedAppContext.Resources
+                            .GetInteger(Resource.Integer.WebDavChunkedUploadSize_default).ToString()));
+            }
         }
     }
 
@@ -1454,8 +1474,7 @@ namespace keepass2android
 		{
 			Kp2aLog.LogUnexpectedError(e.Exception);
 		}
-
-	}
+    }
 
 }
 

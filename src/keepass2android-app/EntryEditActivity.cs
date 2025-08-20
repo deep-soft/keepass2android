@@ -37,8 +37,10 @@ using System.Net;
 using System.Text;
 using Android.Content.Res;
 using Android.Database;
+#if !NO_QR_SCANNER
 using Android.Gms.Common;
 using Android.Gms.Tasks;
+#endif
 using Android.Graphics;
 using Android.Graphics.Drawables;
 using Android.Runtime;
@@ -55,10 +57,11 @@ using Object = Java.Lang.Object;
 using Uri = Android.Net.Uri;
 using Resource = keepass2android.Resource;
 using Google.Android.Material.TextField;
+#if !NO_QR_SCANNER
 using Xamarin.Google.MLKit.Vision.Barcode.Common;
 using Xamarin.Google.MLKit.Vision.CodeScanner;
+#endif
 using Console = System.Console;
-using Task = Android.Gms.Tasks.Task;
 
 namespace keepass2android
 {
@@ -1158,8 +1161,10 @@ namespace keepass2android
             {
                 dlgView.FindViewById(Resource.Id.totp_custom_settings_group).Visibility = args.IsChecked ? ViewStates.Visible : ViewStates.Gone;
             };
-
-            dlgView.FindViewById<Button>(Resource.Id.totp_scan).Click += async (object o, EventArgs args) =>
+#if NO_QR_SCANNER
+            dlgView.FindViewById<Button>(Resource.Id.totp_scan).Visibility = ViewStates.Gone;
+#else
+			dlgView.FindViewById<Button>(Resource.Id.totp_scan).Click += async (object o, EventArgs args) =>
             {
                 if (GoogleApiAvailability.Instance.IsGooglePlayServicesAvailable(this) != ConnectionResult.Success)
                 {
@@ -1194,6 +1199,7 @@ namespace keepass2android
 
 
             };
+#endif
 
 			//copy values from entry into dialog
 			View ees = (View)sender.Parent;
@@ -1572,6 +1578,7 @@ namespace keepass2android
 
 		}
 	}
+#if !NO_QR_SCANNER
     public class SuccessListener : Object, IOnSuccessListener
     {
         private readonly Action<Barcode> _onSuccess;
@@ -1601,8 +1608,9 @@ namespace keepass2android
             _onFailure?.Invoke(e);
         }
     }
+#endif
 
-    public class DefaultEdit : EditModeBase
+	public class DefaultEdit : EditModeBase
 	{
 		
 	}
