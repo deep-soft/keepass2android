@@ -25,7 +25,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -58,25 +60,6 @@ import okio.BufferedSink;
 
 public class WebDavStorage extends JavaFileStorageBase {
 
-
-    public class CleartextBlockInterceptor implements Interceptor {
-        private final boolean permitCleartext;
-
-        public CleartextBlockInterceptor(Context context) {
-            this.permitCleartext = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("permit_cleartext_traffic", false);
-        }
-
-        @Override
-        public Response intercept(Chain chain) throws IOException {
-            Request request = chain.request();
-
-            if (!permitCleartext && request.url().scheme().equals("http")) {
-                throw new IOException("Cleartext HTTP is disabled by user preference. Go to app settings/File handling if you really want to use HTTP.");
-            }
-
-            return chain.proceed(request);
-        }
-    }
 
     private final ICertificateErrorHandler mCertificateErrorHandler;
     private Context appContext;
@@ -165,7 +148,12 @@ public class WebDavStorage extends JavaFileStorageBase {
     //client to be reused (connection pool/thread pool). We're building a custom client for each ConnectionInfo in getClient for actual usage
     final OkHttpClient baseClient = new OkHttpClient();
 
-    private OkHttpClient getClient(ConnectionInfo ci) throws NoSuchAlgorithmException, KeyManagementException, KeyStoreException {
+    private OkHttpClient getClient(ConnectionInfo ci) throws NoSuchAlgorithmException, KeyManagementException, KeyStoreException, IOException {
+
+        if (ci.URL.startsWith("http://") && !PreferenceManager.getDefaultSharedPreferences(appContext).getBoolean("permit_cleartext_traffic", false))
+        {
+            throw new IOException("Cleartext HTTP is disabled by user preference. Go to app settings/File handling if you really want to use HTTP.");
+        }
 
 
         OkHttpClient.Builder builder = baseClient.newBuilder();
@@ -209,7 +197,7 @@ public class WebDavStorage extends JavaFileStorageBase {
             builder.readTimeout(25, TimeUnit.SECONDS);
             builder.writeTimeout(25, TimeUnit.SECONDS);
         }
-        builder.addInterceptor(new CleartextBlockInterceptor(appContext));
+
 
         OkHttpClient client =  builder.build();
 
@@ -227,7 +215,19 @@ public class WebDavStorage extends JavaFileStorageBase {
                 .method("MOVE", null) // "MOVE" is the HTTP method
                 .header("Destination", destinationCi.URL); // New URI for the resource
 
-        // Add Overwrite header
+        // Use delete-then-move strategy to avoid HTTP 409 conflicts
+        if (overwrite) {
+            try {
+                // Try to delete the destination file first if it exists
+                deleteFileIfExists(destinationCi);
+            } catch (Exception e) {
+                // Ignore deletion errors - the file might not exist or we might not have permission
+                // The MOVE operation will fail if the destination can't be overwritten
+                Log.d("WebDavStorage", "Failed to delete destination file before move (this may be normal): " + e.getMessage());
+            }
+        }
+
+        // Add Overwrite header (but don't rely on it solely)
         if (overwrite) {
             requestBuilder.header("Overwrite", "T"); // 'T' for true
         } else {
@@ -247,7 +247,102 @@ public class WebDavStorage extends JavaFileStorageBase {
         }
         else
         {
-            throw new Exception("Rename/Move failed for " + sourceCi.URL + " to " + destinationCi.URL + ": " + response.code() + " " + response.message());
+            int statusCode = response.code();
+            String errorMessage = "Rename/Move failed for " + sourceCi.URL + " to " + destinationCi.URL + ": " + statusCode + " " + response.message();
+
+            // If we get a 409 conflict and overwrite is true, try retry with enhanced cleanup
+            if (overwrite && statusCode == 409) {
+                try {
+                    response.close();
+                    // Force delete destination and retry
+                    deleteFileIfExists(destinationCi);
+                    // Small delay to ensure server processes the deletion
+                    Thread.sleep(100);
+
+                    // Retry the MOVE operation
+                    Response retryResponse = getClient(sourceCi).newCall(request).execute();
+                    if (retryResponse.isSuccessful()) {
+                        retryResponse.close();
+                        return; // Success on retry
+                    } else {
+                        errorMessage = "Rename/Move failed even after retry for " + sourceCi.URL + " to " + destinationCi.URL + ": " + retryResponse.code() + " " + retryResponse.message();
+                        retryResponse.close();
+                    }
+                } catch (Exception retryException) {
+                    errorMessage = "Rename/Move failed and retry attempt also failed: " + errorMessage + " (Retry error: " + retryException.getMessage() + ")";
+                }
+            }
+
+            throw new Exception(errorMessage);
+        }
+    }
+
+    /**
+     * Helper method to delete a file if it exists
+     * Uses PROPFIND to check existence first to avoid errors on non-existent files
+     */
+    private void deleteFileIfExists(ConnectionInfo ci) throws Exception {
+        try {
+            // First check if file exists using PROPFIND
+            if (fileExists(ci)) {
+                // File exists, proceed with deletion
+                Request request = new Request.Builder()
+                        .url(new URL(ci.URL))
+                        .delete()
+                        .build();
+                Response response = getClient(ci).newCall(request).execute();
+                try {
+                    // Accept 200 OK, 204 No Content, or 404 Not Found (already deleted)
+                    if (!response.isSuccessful() && response.code() != 404) {
+                        throw new Exception("Delete failed with status: " + response.code() + " " + response.message());
+                    }
+                } finally {
+                    response.close();
+                }
+            }
+        } catch (FileNotFoundException e) {
+            // File doesn't exist, which is fine
+            Log.d("WebDavStorage", "File does not exist, no deletion needed: " + ci.URL);
+        }
+    }
+
+    /**
+     * Helper method to check if a file exists using PROPFIND
+     */
+    private boolean fileExists(ConnectionInfo ci) throws Exception {
+        try {
+            Request request = new Request.Builder()
+                    .url(new URL(ci.URL))
+                    .method("PROPFIND", RequestBody.create(MediaType.parse("application/xml"),
+                            "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n" +
+                            "<D:propfind xmlns:D=\"DAV:\">\n" +
+                            "    <D:prop>\n" +
+                            "        <D:resourcetype/>\n" +
+                            "    </D:prop>\n" +
+                            "</D:propfind>"))
+                    .header("Depth", "0")
+                    .header("Content-Type", "application/xml")
+                    .build();
+
+            Response response = getClient(ci).newCall(request).execute();
+            try {
+                // 200 OK means file exists, 404 means it doesn't exist
+                if (response.isSuccessful()) {
+                    return true;
+                } else if (response.code() == 404) {
+                    return false;
+                } else {
+                    // For other status codes, assume file exists to be safe
+                    Log.w("WebDavStorage", "Unexpected status checking file existence: " + response.code() + " for " + ci.URL);
+                    return true;
+                }
+            } finally {
+                response.close();
+            }
+        } catch (Exception e) {
+            // If PROPFIND fails, assume file exists to be safe
+            Log.w("WebDavStorage", "Error checking file existence, assuming it exists: " + e.getMessage());
+            return true;
         }
     }
 
@@ -318,18 +413,13 @@ public class WebDavStorage extends JavaFileStorageBase {
             }
             else
             {
-                requestBody = new MultipartBody.Builder()
-                    .addPart(RequestBody.create(data, MediaType.parse("application/binary")))
-                    .build();
-            }            
-
+                requestBody = RequestBody.create(data, MediaType.parse("application/binary"));
+            }
 
             Request request = new Request.Builder()
                     .url(new URL(ci.URL))
                     .put(requestBody)
                     .build();
-
-
 
             Response response = getClient(ci).newCall(request).execute();
             checkStatus(response);
@@ -616,7 +706,14 @@ public class WebDavStorage extends JavaFileStorageBase {
 
         try {
             ConnectionInfo ci = splitStringToConnectionInfo(path);
-            return ci.URL;
+            try
+            {
+                return java.net.URLDecoder.decode(ci.URL, StandardCharsets.UTF_8);
+            }
+            catch (Exception e)
+            {
+                return  ci.URL;
+            }
         }
         catch (Exception e)
         {
@@ -655,4 +752,3 @@ public class WebDavStorage extends JavaFileStorageBase {
     }
 
 }
-

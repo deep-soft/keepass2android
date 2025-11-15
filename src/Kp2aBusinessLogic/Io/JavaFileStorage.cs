@@ -111,6 +111,11 @@ namespace keepass2android.Io
 			}
 
 			Java.Lang.Exception exception = e as Java.Lang.Exception;
+
+            if ((exception is Java.Lang.InterruptedException) || (exception is Java.IO.InterruptedIOException))
+            {
+                throw new Java.Lang.InterruptedException(exception.Message);
+            }
 			if (exception != null)
 			{
 				var ex = new Exception(exception.LocalizedMessage ??
@@ -325,7 +330,7 @@ namespace keepass2android.Io
 
 		public string GetDisplayName(IOConnectionInfo ioc)
 		{
-			return _jfs.GetDisplayName(ioc.Path);
+			return _jfs.GetDisplayName(IocToPath(ioc));
 		}
 
 		public string CreateFilePath(string parent, string newFilename)
@@ -357,7 +362,6 @@ namespace keepass2android.Io
 		private DateTime JavaTimeToCSharp(long javatime)
 		{
 			return new DateTime(1970, 1, 1).AddMilliseconds(javatime);
-
 		}
 
 		public virtual string IocToPath(IOConnectionInfo ioc)

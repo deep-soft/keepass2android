@@ -183,11 +183,14 @@ namespace keepass2android.Io
 					throw;
 
 #if DEBUG
-                Kp2aLog.Log("couldn't open from remote " + ioc.Path);
+                Kp2aLog.Log("couldn't open from remote " + GetDisplayName(ioc));
 #endif
 				Kp2aLog.Log(ex.ToString());
-
-				_cacheSupervisor.CouldntOpenFromRemote(ioc, ex);
+                if (TriggerWarningWhenFallingBackToCache)
+                {
+                    _cacheSupervisor.CouldntOpenFromRemote(ioc, ex);
+                }
+				
 				return File.OpenRead(cachedFilePath);
 			}
 		}
@@ -303,7 +306,7 @@ namespace keepass2android.Io
 
 				using (HashingStreamEx cachedFile = new HashingStreamEx(File.Create(cachedFilePath), true, new SHA256Managed()))
 				{
-					remoteFile.CopyTo(cachedFile);
+                    MemUtil.CopyStream(remoteFile, cachedFile);
 					cachedFile.Close();
 					fileHash = MemUtil.ByteArrayToHexString(cachedFile.Hash);
 				}
@@ -324,10 +327,13 @@ namespace keepass2android.Io
 			}
 			catch (Exception e)
 			{
-				Kp2aLog.Log("couldn't save to remote " + ioc.Path);
+				Kp2aLog.Log("couldn't save to remote " + GetDisplayName(ioc));
 				Kp2aLog.Log(e.ToString());
 				//notify the supervisor so it might display a warning or schedule a retry
-				_cacheSupervisor.CouldntSaveToRemote(ioc, e);
+                if (TriggerWarningWhenFallingBackToCache)
+                {
+                    _cacheSupervisor.CouldntSaveToRemote(ioc, e); }
+				
 				return false;
 			}
 		}
@@ -339,7 +345,7 @@ namespace keepass2android.Io
 				IWriteTransaction remoteTrans = _cachedStorage.OpenWriteTransaction(ioc, useFileTransaction))
 			{
 				Stream remoteStream = remoteTrans.OpenFile();
-				cachedData.CopyTo(remoteStream);
+				MemUtil.CopyStream(cachedData, remoteStream);
 				remoteStream.Close();
 				remoteTrans.CommitWrite();
 			}
@@ -632,7 +638,9 @@ namespace keepass2android.Io
 			set { _cachedStorage.IsOffline = value; }
 		}
 
-		public void OnRequestPermissionsResult(IFileStorageSetupActivity fileStorageSetupActivity, int requestCode,
+        public bool TriggerWarningWhenFallingBackToCache { get; set; }
+
+        public void OnRequestPermissionsResult(IFileStorageSetupActivity fileStorageSetupActivity, int requestCode,
 			string[] permissions, Permission[] grantResults)
 		{
 			_cachedStorage.OnRequestPermissionsResult(fileStorageSetupActivity, requestCode, permissions, grantResults);
